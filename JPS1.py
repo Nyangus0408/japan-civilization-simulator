@@ -5,56 +5,42 @@ import google.generativeai as genai
 import json
 
 # ==========================================
-# 1. マスターデータ & シミュレーションエンジン
+# 【データ層】 historical_events.json / 史実データ 相当
 # ==========================================
-Y0, Y1 = 1945, 1975
+# 1945〜2025年の主要イベントマスター
+EVENTS = {
+    1947: {"name": "日本国憲法 施行", "desc": "新憲法が施行され、平和主義・民主主義が定着し始めました。"},
+    1950: {"name": "朝鮮特需", "desc": "隣国での戦争により、日本の製造業に大量の発注が舞い込みました。"},
+    1964: {"name": "東京オリンピック", "desc": "インフラ整備が進み、国際社会への復帰を強く印象付けました。"},
+    1973: {"name": "第一次オイルショック", "desc": "中東情勢の悪化により原油価格が急騰。インフレが進行しています。"},
+    1985: {"name": "プラザ合意", "desc": "急激な円高が進行し、輸出産業が打撃を受ける一方でバブルの足音が近づいています。"},
+    1991: {"name": "バブル崩壊", "desc": "資産価格が急落し、不良債権問題が顕在化し始めました。"},
+    2008: {"name": "リーマン・ショック", "desc": "世界的な金融危機により、輸出を中心に日本経済も大きな打撃を受けました。"},
+    2011: {"name": "東日本大震災", "desc": "未曾有の大震災と原発事故が発生。サプライチェーンが寸断されました。"},
+    2020: {"name": "COVID-19 パンデミック", "desc": "新型感染症の世界的流行により、経済活動が大きく制限されています。"}
+}
+
+def generate_hist_data():
+    # 1945-2025年の史実ベースラインを自動生成
+    data = {}
+    for y in range(1945, 2026):
+        progress = min(1.0, (y - 1945) / 45.0)
+        g = int(0 + 200 * progress if y <= 1990 else 200 + 20 * (y-1990)/35.0)
+        w = int(2 + 100 * progress)
+        m = int(2 + 40 * progress)
+        d = int(30 + 70 * progress)
+        t = int(0 + 150 * progress)
+        np_val = int(g*0.25 + w*0.15 + m*0.25 + d*0.15 + t*0.20)
+        data[y] = {'gdp': g, 'welfare': w, 'military': m, 'diplomacy': d, 'tech': t, 'np': np_val}
+    return data
+
+HIST = generate_hist_data()
 SCALE = 2.0
 W = {'gdp': .25, 'welfare': .15, 'military': .25, 'diplomacy': .15, 'tech': .20}
 
-# 史実データ (1945-1975)
-HIST_DATA = [
-    (1945,8,15,0,2,30), (1946,7,10,0,2,28), (1947,8,12,0,2,28), (1948,9,13,0,3,29), (1949,10,14,0,3,30),
-    (1950,12,18,2,5,31), (1951,14,20,3,12,32), (1952,16,22,5,18,33), (1953,18,24,6,20,35), (1954,19,25,7,22,36),
-    (1955,22,28,8,24,38), (1956,25,30,8,30,40), (1957,28,32,9,32,42), (1958,30,33,9,33,43), (1959,34,35,10,35,45),
-    (1960,38,38,10,38,48), (1961,43,40,10,40,50), (1962,46,42,10,41,52), (1963,50,44,11,42,54), (1964,55,46,11,46,56),
-    (1965,58,48,11,48,58), (1966,63,50,12,49,60), (1967,70,52,12,50,62), (1968,77,54,12,52,64), (1969,84,56,13,54,66),
-    (1970,90,58,13,57,68), (1971,93,59,13,59,69), (1972,97,61,14,63,70), (1973,102,60,14,65,72), (1974,99,55,14,66,72),
-    (1975,100,57,15,68,73)
-]
-HIST = {}
-for (y, g, w, m, d, t) in HIST_DATA:
-    np_val = g*W['gdp'] + w*W['welfare'] + m*W['military'] + d*W['diplomacy'] + t*W['tech']
-    HIST[y] = {'gdp': g, 'welfare': w, 'military': m, 'diplomacy': d, 'tech': t, 'np': np_val}
-
-# 利用可能な政策
-POLS = [
-    {'id':'food', 'name':'食料増産政策', 'cat':'社会', 'era':[1945,1950]},
-    {'id':'edu_r', 'name':'教育制度改革', 'cat':'社会', 'era':[1947,1956]},
-    {'id':'tilt', 'name':'傾斜生産方式', 'cat':'経済', 'era':[1947,1950]},
-    {'id':'dodge', 'name':'ドッジ・ライン推進', 'cat':'経済', 'era':[1949,1951]},
-    {'id':'usall', 'name':'日米安保体制強化', 'cat':'外交', 'era':[1951,1975]},
-    {'id':'tech_i', 'name':'海外技術導入促進', 'cat':'技術', 'era':[1950,1970]},
-    {'id':'heavy', 'name':'重化学工業推進', 'cat':'経済', 'era':[1952,1970]},
-    {'id':'soc_s', 'name':'社会保障制度整備', 'cat':'社会', 'era':[1955,1975]},
-    {'id':'trade', 'name':'貿易自由化推進', 'cat':'外交', 'era':[1957,1975]},
-    {'id':'inc2', 'name':'所得倍増計画', 'cat':'経済', 'era':[1960,1965]},
-    {'id':'rd', 'name':'研究開発投資強化', 'cat':'技術', 'era':[1962,1975]},
-    {'id':'env', 'name':'環境・公害対策', 'cat':'社会', 'era':[1965,1975]},
-    {'id':'asia', 'name':'アジア外交・ODA拡大', 'cat':'外交', 'era':[1965,1975]},
-    {'id':'china_p', 'name':'中国関係の先行構築', 'cat':'外交', 'era':[1969,1975]},
-    {'id':'enrgy', 'name':'省エネ・産業構造転換', 'cat':'技術', 'era':[1971,1975]},
-    {'id':'sdf_b', 'name':'自衛隊整備・防衛強化', 'cat':'防衛', 'era':[1954,1975]},
-]
-
-POLS_EFF = {
-    'food': {'socialDev': 3}, 'edu_r': {'humanCap': 3}, 'tilt': {'econCap': 5, 'socialDev': -2},
-    'dodge': {'econCap': 3}, 'usall': {'diplomNet': 8, 'econCap': 2}, 'tech_i': {'researchCap': 5, 'econCap': 2},
-    'heavy': {'econCap': 8, 'socialDev': -3}, 'soc_s': {'socialDev': 5, 'econCap': -1}, 'trade': {'econCap': 3, 'diplomNet': 4},
-    'inc2': {'econCap': 10, 'socialDev': 4, 'humanCap': 2}, 'rd': {'researchCap': 5, 'humanCap': 2},
-    'env': {'socialDev': 6, 'econCap': -3}, 'asia': {'diplomNet': 8}, 'china_p': {'diplomNet': 12, 'econCap': 4},
-    'enrgy': {'researchCap': 5, 'econCap': 3}, 'sdf_b': {'milCap': 7}
-}
-
+# ==========================================
+# 【エンジン層】 economy.py / core.py 相当
+# ==========================================
 def calc_hi(d):
     return {
         'gdp': round(100 + (d['econCap']*0.50 + d['humanCap']*0.25 + d['researchCap']*0.15) * SCALE),
@@ -71,10 +57,10 @@ def calc_np(hi, yr):
            h['military'] * (hi['military']/100) * W['military'] +
            h['diplomacy'] * (hi['diplomacy']/100) * W['diplomacy'] +
            h['tech'] * (hi['tech']/100) * W['tech'])
-    return round(gNP / h['np'] * 100)
+    return round(gNP / max(1, h['np']) * 100)
 
 # ==========================================
-# 2. AIレイヤー (Gemini API 統合)
+# 【AIレイヤー】 advisor.py / cabinet.py 相当
 # ==========================================
 def call_ai(prompt, as_json=True):
     if "GEMINI_API_KEY" not in st.secrets:
@@ -84,7 +70,6 @@ def call_ai(prompt, as_json=True):
         model = genai.GenerativeModel('gemini-3.6-flash')
         resp = model.generate_content(prompt).text
         if as_json:
-            # Markdownのコードブロックをクリーンアップ
             if "```json" in resp: resp = resp.split("```json")[1].split("```")[0]
             elif "```" in resp: resp = resp.split("```")[1].split("```")[0]
             return json.loads(resp.strip())
@@ -94,127 +79,178 @@ def call_ai(prompt, as_json=True):
         return None
 
 # ==========================================
-# 3. Streamlit UI & State
+# 【UI層】 Streamlit メインアプリ
 # ==========================================
-st.set_page_config(page_title="AI国家運営シミュレーター", layout="wide", initial_sidebar_state="expanded")
+st.set_page_config(page_title="日本国家シミュレーション", layout="wide", initial_sidebar_state="collapsed")
 
+# セッションステート初期化（拡張経済モデル変数追加）
 if 'year' not in st.session_state:
-    st.session_state.year = Y0
-    st.session_state.d = {'econCap':0, 'humanCap':0, 'socialDev':0, 'milCap':0, 'diplomNet':0, 'researchCap':0}
+    st.session_state.year = 1945
+    st.session_state.state = {
+        'econCap': 0, 'humanCap': 0, 'socialDev': 0, 'milCap': 0, 'diplomNet': 0, 'researchCap': 0,
+        'inflation': 5.0, 'debt': 15.0 # 新規追加パラメータ
+    }
     st.session_state.history = []
     st.session_state.ai_news = ""
     st.session_state.ai_citizens = {}
-    st.session_state.cabinet_resp = {}
+    st.session_state.ai_proposal = None
+    st.session_state.event_msg = ""
 
-hi = calc_hi(st.session_state.d)
+# 現在の数値計算
+hi = calc_hi(st.session_state.state)
 np_val = calc_np(hi, st.session_state.year)
 
-# ヘッダー領域
-st.title(f"🇯🇵 日本再建シミュレーター — {st.session_state.year}年")
-cols = st.columns(6)
-cols[0].metric("総合国力", np_val, f"{np_val - 100}% (対史実)")
-cols[1].metric("GDP", hi['gdp'])
-cols[2].metric("国民福祉", hi['welfare'])
-cols[3].metric("軍事力", hi['military'])
-cols[4].metric("外交力", hi['diplomacy'])
-cols[5].metric("技術力", hi['tech'])
+# UIヘッダー
+st.title(f"🇯🇵 日本国家シミュレーション — {st.session_state.year}年")
+if st.session_state.year >= 2026:
+    st.success("🏁 2025年を突破しました！これ以降はAIによる未知の未来シミュレーションとなります。")
+
+# スマホ閲覧を考慮したコンパクトな指標表示
+c1, c2, c3, c4 = st.columns(4)
+c1.metric("総合国力", np_val, f"{np_val - 100}% (対史実)")
+c2.metric("GDP指数", hi['gdp'])
+c3.metric("インフレ率", f"{st.session_state.state['inflation']:.1f}%")
+c4.metric("政府債務残高対GDP比", f"{st.session_state.state['debt']:.1f}%")
 
 st.divider()
 
-# タブ構成
-tab_policy, tab_news, tab_data = st.tabs(["🏛️ AI閣議・政策実行", "📰 AIニュース・国民の声", "📊 Historical Index推移"])
+tab_policy, tab_news, tab_data = st.tabs(["🏛️ 政策とAI閣議", "📰 ニュース・世論", "📊 国家推移データ"])
 
-# --------- タブ1: AI閣議と政策 ---------
 with tab_policy:
-    st.subheader("首相の方針指示 (自然言語入力)")
-    directive = st.text_area("今期の方針を入力してください", placeholder="例：半導体産業を国内に呼び戻し、同時に社会保障も手厚くしたい")
+    # 歴史イベントのポップアップ
+    if st.session_state.event_msg:
+        st.warning(f"🔔 **歴史イベント発生:** {st.session_state.event_msg}")
+
+    st.subheader("💬 AI首相補佐官への指示")
+    directive = st.text_area("今期の方針を自然言語で入力してください", placeholder="例：インフレを抑えつつ、地方の教育と医療に予算を回してほしい")
     
-    if st.button("🏛️ 閣議を開催する", type="primary"):
+    # 政策提案フェーズ
+    if st.button("補佐官に政策案を作成させる", type="primary"):
         if directive:
-            with st.spinner("AI大臣たちが協議中..."):
+            with st.spinner("AIが現状データを分析し、政策パッケージと閣僚の意見を生成中..."):
                 prompt = f"""
-                あなたは{st.session_state.year}年の日本の内閣です。首相の指示:「{directive}」
-                現在の国家状況: GDP指数{hi['gdp']}, 福祉指数{hi['welfare']} (史実は常に100)
-                各大臣の立場で、指示に対する現実的な意見を述べてください。時代考証を踏まえてください。
-                以下のJSONのみを出力してください。
-                {{"官房長官": "...", "財務大臣": "...", "経産大臣": "...", "厚労大臣": "...", "野党党首": "..."}}
+                あなたは{st.session_state.year}年の日本のAI首相補佐官です。
+                現在の国家状況: GDP指数{hi['gdp']}, インフレ率{st.session_state.state['inflation']}%, 債務比率{st.session_state.state['debt']}%
+                首相の指示:「{directive}」
+                
+                この指示を実現する具体的な政策案と、閣僚たちの反応を生成してください。
+                数値を直接変更するのではなく、以下のJSON形式でPythonエンジンへの増減パラメータ(effects)を提案してください。
+                
+                {{
+                  "proposal_name": "政策パッケージ名",
+                  "analysis": "現状分析と効果の解説",
+                  "cabinet": {{
+                    "財務大臣": "財政的な視点での意見",
+                    "経産大臣": "産業的な視点での意見",
+                    "厚労大臣": "国民生活の視点での意見",
+                    "野党党首": "批判的・代替案的な意見"
+                  }},
+                  "effects": {{
+                    "econCap": [経済への影響: -3〜3の整数],
+                    "humanCap": [人材・教育への影響: -3〜3の整数],
+                    "socialDev": [社会・福祉への影響: -3〜3の整数],
+                    "milCap": [軍事への影響: -3〜3の整数],
+                    "diplomNet": [外交への影響: -3〜3の整数],
+                    "researchCap": [技術への影響: -3〜3の整数],
+                    "inflation_change": [インフレ率への影響: -2.0〜2.0の浮動小数点],
+                    "debt_change": [債務比率への影響: -5.0〜5.0の浮動小数点]
+                  }}
+                }}
                 """
                 resp = call_ai(prompt, as_json=True)
                 if resp:
-                    st.session_state.cabinet_resp = resp
+                    st.session_state.ai_proposal = resp
+                    st.rerun()
         else:
-            st.warning("方針を入力してください。")
+            st.warning("指示を入力してください。")
 
-    if st.session_state.cabinet_resp:
-        c1, c2, c3 = st.columns(3)
-        c1.info(f"**🏛️ 官房長官:**\n\n{st.session_state.cabinet_resp.get('官房長官','')}")
-        c2.warning(f"**💰 財務大臣:**\n\n{st.session_state.cabinet_resp.get('財務大臣','')}")
-        c3.success(f"**🏭 経産大臣:**\n\n{st.session_state.cabinet_resp.get('経産大臣','')}")
-        c1.error(f"**🏥 厚労大臣:**\n\n{st.session_state.cabinet_resp.get('厚労大臣','')}")
-        c2.write(f"**🔴 野党党首:**\n\n{st.session_state.cabinet_resp.get('野党党首','')}")
-    
-    st.subheader("政策の実行")
-    # 選択可能な政策をフィルタ
-    avail_pols = [p for p in POLS if p['era'][0] <= st.session_state.year <= p['era'][1]]
-    selected_pols = st.multiselect("方針を踏まえ、実行する政策パッケージを選択してください", options=[p['id'] for p in avail_pols], format_func=lambda x: next(p['name'] for p in avail_pols if p['id'] == x))
+    # 政策実行フェーズ
+    if st.session_state.ai_proposal:
+        prop = st.session_state.ai_proposal
+        st.info(f"📋 **提案政策:** {prop.get('proposal_name', '不明')}\n\n**補佐官の分析:** {prop.get('analysis', '')}")
+        
+        st.write("### 🏛️ 閣僚の意見")
+        cab = prop.get('cabinet', {})
+        cb1, cb2 = st.columns(2)
+        cb1.success(f"**💰 財務大臣:** {cab.get('財務大臣','')}")
+        cb2.info(f"**🏭 経産大臣:** {cab.get('経産大臣','')}")
+        cb1.warning(f"**🏥 厚労大臣:** {cab.get('厚労大臣','')}")
+        cb2.error(f"**🔴 野党党首:** {cab.get('野党党首','')}")
 
-    if st.button("次の年へ進む ➔", use_container_width=True):
-        # 政策の適用
-        pol_names = []
-        for p_id in selected_pols:
-            effs = POLS_EFF.get(p_id, {})
-            for k, v in effs.items():
-                st.session_state.d[k] += v
-            pol_names.append(next(p['name'] for p in avail_pols if p['id'] == p_id))
+        if st.button("✅ この政策を実行して翌年へ進む", use_container_width=True):
+            # パラメータの更新 (AIの提案をPythonエンジンが適用)
+            eff = prop.get('effects', {})
+            st.session_state.state['econCap'] += eff.get('econCap', 0)
+            st.session_state.state['humanCap'] += eff.get('humanCap', 0)
+            st.session_state.state['socialDev'] += eff.get('socialDev', 0)
+            st.session_state.state['milCap'] += eff.get('milCap', 0)
+            st.session_state.state['diplomNet'] += eff.get('diplomNet', 0)
+            st.session_state.state['researchCap'] += eff.get('researchCap', 0)
+            st.session_state.state['inflation'] += eff.get('inflation_change', 0.0)
+            st.session_state.state['debt'] += eff.get('debt_change', 0.0)
             
-        st.session_state.history.append({
-            'year': st.session_state.year, 'np': np_val, 'gdp': hi['gdp'], 'welfare': hi['welfare']
-        })
-        
-        # 次のターンに向けたAI生成（ニュース・国民の声）
-        with st.spinner("AIが世界の変化を演算中..."):
-            p_str = "、".join(pol_names) if pol_names else "特になし"
-            news_prompt = f"""
-            あなたは{st.session_state.year}年の日本に生きる人々です。政府は今年、以下の政策を実行しました: {p_str}
-            以下のJSON形式でリアルな反応を生成してください。時代考証（白黒テレビ、石油危機など）を反映させてください。
-            {{
-              "news": "【AI日経速報】見出し\n本文...",
-              "worker": "工場の労働者(30代)の反応",
-              "farmer": "農家(50代)の反応",
-              "student": "大学生(20代)の反応"
-            }}
-            """
-            news_resp = call_ai(news_prompt, as_json=True)
-            if news_resp:
-                st.session_state.ai_news = news_resp.get("news", "")
-                st.session_state.ai_citizens = news_resp
-        
-        st.session_state.year += 1
-        st.session_state.cabinet_resp = {}
-        st.rerun()
+            # 履歴保存
+            st.session_state.history.append({
+                'year': st.session_state.year, 'np': np_val, 'gdp': hi['gdp'], 
+                'inflation': st.session_state.state['inflation'], 'debt': st.session_state.state['debt']
+            })
+            
+            # 世論とニュースの生成
+            with st.spinner("AIが世界の変化と国民の声を演算中..."):
+                news_prompt = f"""
+                あなたは{st.session_state.year}年の日本です。政府は「{prop.get('proposal_name', '')}」を実行しました。
+                以下のJSON形式で時代考証を反映したリアルな反応を生成してください。
+                {{
+                  "news": "【AI日経速報】見出し\n本文...",
+                  "worker": "工場の労働者(30代)の反応",
+                  "farmer": "地方の農家(50代)の反応",
+                  "student": "都市部の大学生(20代)の反応"
+                }}
+                """
+                news_resp = call_ai(news_prompt, as_json=True)
+                if news_resp:
+                    st.session_state.ai_news = news_resp.get("news", "")
+                    st.session_state.ai_citizens = news_resp
+            
+            # ターン進行とイベント判定
+            st.session_state.year += 1
+            st.session_state.ai_proposal = None
+            
+            if st.session_state.year in EVENTS:
+                ev = EVENTS[st.session_state.year]
+                st.session_state.event_msg = f"【{ev['name']}】 {ev['desc']}"
+            else:
+                st.session_state.event_msg = ""
+                
+            st.rerun()
 
-# --------- タブ2: AIニュースと国民の声 ---------
 with tab_news:
     if st.session_state.ai_news:
         st.subheader("📰 AI日本経済新聞")
         st.code(st.session_state.ai_news, language="markdown")
         
         st.subheader("🗣️ AI国民の声")
-        colA, colB, colC = st.columns(3)
-        colA.info(f"**👷 製造業労働者:**\n\n{st.session_state.ai_citizens.get('worker', '')}")
-        colB.success(f"**🌾 農家:**\n\n{st.session_state.ai_citizens.get('farmer', '')}")
-        colC.warning(f"**🎓 大学生:**\n\n{st.session_state.ai_citizens.get('student', '')}")
+        # スマホでの視認性を考慮し expander を使用
+        with st.expander("👷 製造業労働者の声", expanded=True):
+            st.write(st.session_state.ai_citizens.get('worker', ''))
+        with st.expander("🌾 地方農家の声", expanded=True):
+            st.write(st.session_state.ai_citizens.get('farmer', ''))
+        with st.expander("🎓 大学生の声", expanded=True):
+            st.write(st.session_state.ai_citizens.get('student', ''))
     else:
-        st.write("まだ大きなニュースはありません。「次の年へ進む」とAIが世論を生成します。")
+        st.write("政策を実行すると、ここにニュースと国民の声が表示されます。")
 
-# --------- タブ3: データ推移 ---------
 with tab_data:
     if len(st.session_state.history) > 0:
         df = pd.DataFrame(st.session_state.history)
-        fig = px.line(df, x="year", y=["np", "gdp", "welfare"], markers=True, 
-                      labels={"value": "Historical Index (史実=100)", "variable": "指標", "year": "年"},
-                      title="国家の成長軌跡")
-        fig.add_hline(y=100, line_dash="dash", line_color="gray", annotation_text="史実基準(100)")
+        fig = px.line(df, x="year", y=["np", "gdp"], markers=True, 
+                      labels={"value": "指数", "variable": "指標", "year": "年"},
+                      title="国家成長軌跡 (GDP・総合国力)")
         st.plotly_chart(fig, use_container_width=True)
+        
+        fig2 = px.line(df, x="year", y=["inflation", "debt"], markers=True, 
+                      labels={"value": "パーセンテージ(%)", "variable": "指標", "year": "年"},
+                      title="マクロ経済推移 (インフレ率・政府債務)")
+        st.plotly_chart(fig2, use_container_width=True)
     else:
         st.write("ターンを進めるとここにグラフが表示されます。")
