@@ -151,7 +151,7 @@ with tab_policy:
         c2.warning(f"**💰 財務大臣:**\n\n{st.session_state.cabinet_resp.get('財務大臣','')}")
         c3.success(f"**🏭 経産大臣:**\n\n{st.session_state.cabinet_resp.get('経産大臣','')}")
         c1.error(f"**🏥 厚労大臣:**\n\n{st.session_state.cabinet_resp.get('厚労大臣','')}")
-        c2.secondary(f"**🔴 野党党首:**\n\n{st.session_state.cabinet_resp.get('野党党首','')}")
+        c2.write(f"**🔴 野党党首:**\n\n{st.session_state.cabinet_resp.get('野党党首','')}")
     
     st.subheader("政策の実行")
     # 選択可能な政策をフィルタ
