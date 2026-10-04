@@ -1,0 +1,699 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>UI改善提案 — 日本国家シミュレーション</title>
+<style>
+:root{
+  --bg:#04060C;--s0:#08101C;--s1:#0D1828;--s2:#121F34;--s3:#182840;
+  --bd0:#141E38;--bd1:#1C2A4A;--bd2:#253858;
+  --gold:#D4A83C;--goldhi:#F0C050;--goldbg:rgba(212,168,60,.1);
+  --up:#3AB888;--upbg:rgba(58,184,136,.1);
+  --dn:#C85050;--dnbg:rgba(200,80,80,.1);
+  --sky:#4888D4;--skybg:rgba(72,136,212,.1);
+  --lav:#8070C8;--lavbg:rgba(128,112,200,.1);
+  --amber:#D48030;--amberbg:rgba(212,128,48,.1);
+  --t0:#C8D8EC;--t1:#607890;--t2:#2E4060;
+  font-family:'Hiragino Kaku Gothic ProN','Hiragino Sans','Yu Gothic UI','Meiryo',sans-serif;
+  font-size:13px;line-height:1.6;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--t0);min-height:100vh;}
+button{font-family:inherit;cursor:pointer;border:none;}
+::-webkit-scrollbar{width:4px;height:4px;}
+::-webkit-scrollbar-thumb{background:var(--bd2);border-radius:2px;}
+
+/* ═══ PROPOSAL BANNER ═══════════════════════════════ */
+.proposal-banner{
+  background:linear-gradient(135deg,#0D1428,#162040);
+  border-bottom:2px solid var(--gold);
+  padding:12px 20px;display:flex;align-items:center;gap:12px;
+}
+.pb-badge{background:var(--gold);color:#04060C;font-size:10px;font-weight:700;padding:3px 8px;border-radius:3px;flex-shrink:0;}
+.pb-text{font-size:12px;color:var(--t1);}
+.pb-text strong{color:var(--gold);}
+
+/* ═══ GAME HEADER ════════════════════════════════════ */
+#hdr{
+  background:var(--s0);border-bottom:1px solid var(--bd1);
+  padding:0;
+}
+.hdr-era-bar{
+  background:linear-gradient(90deg,#0A2818,#0D1828);
+  border-bottom:1px solid #1A3A28;
+  padding:5px 20px;display:flex;align-items:center;gap:10px;
+  font-size:10px;color:#3A9870;letter-spacing:.08em;
+}
+.era-dot{width:6px;height:6px;border-radius:50%;background:#3A9870;animation:pulse 2s infinite;}
+@keyframes pulse{0%,100%{opacity:1;}50%{opacity:.4;}}
+.hdr-main{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:10px 20px;gap:16px;
+}
+.hdr-left{display:flex;align-items:baseline;gap:10px;}
+.flag-icon{font-size:28px;}
+.year-display{font-size:36px;font-weight:700;color:var(--gold);line-height:1;}
+.year-sub{font-size:11px;color:var(--t2);margin-top:2px;}
+.hdr-center{display:flex;gap:16px;}
+.hdr-metric{text-align:center;background:var(--s1);border:1px solid var(--bd1);border-radius:8px;padding:8px 16px;}
+.hm-val{font-size:22px;font-weight:700;line-height:1;}
+.hm-lbl{font-size:9px;color:var(--t2);margin-top:2px;letter-spacing:.06em;}
+.hm-trend{font-size:10px;margin-top:1px;}
+.hdr-right{text-align:right;}
+.support-ring-wrap{position:relative;width:70px;height:70px;margin:0 auto 4px;}
+.support-ring-wrap svg{width:100%;height:100%;}
+.support-num{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;color:var(--up);}
+.support-lbl{font-size:9px;color:var(--t2);text-align:center;letter-spacing:.06em;}
+
+/* ═══ TABS ═══════════════════════════════════════════ */
+.tab-bar{
+  background:var(--s0);border-bottom:1px solid var(--bd1);
+  display:flex;padding:0 20px;gap:2px;
+}
+.tab-btn{
+  padding:10px 18px;font-size:12px;font-weight:600;
+  background:transparent;color:var(--t1);border:none;
+  border-bottom:2px solid transparent;cursor:pointer;
+  transition:all .15s;letter-spacing:.02em;
+}
+.tab-btn.active{color:var(--gold);border-bottom-color:var(--gold);}
+.tab-btn:hover:not(.active){color:var(--t0);}
+
+/* ═══ MAIN CONTENT ═══════════════════════════════════ */
+#main{
+  display:grid;
+  grid-template-columns:240px 1fr 240px;
+  gap:0;
+  min-height:calc(100vh - 150px);
+}
+.panel{padding:14px;overflow-y:auto;}
+.panel-left{border-right:1px solid var(--bd0);background:var(--bg);}
+.panel-center{background:var(--bg);}
+.panel-right{border-left:1px solid var(--bd0);background:var(--bg);}
+
+.section-title{font-size:9px;color:var(--t2);letter-spacing:.12em;padding-bottom:6px;border-bottom:1px solid var(--bd0);margin-bottom:10px;}
+
+/* ═══ LEFT: NATIONAL DASHBOARD ══════════════════════ */
+.np-hero{
+  text-align:center;padding:16px 12px;
+  background:linear-gradient(135deg,var(--s2),var(--s1));
+  border:1px solid var(--bd2);border-radius:10px;margin-bottom:12px;
+}
+.np-val{font-size:48px;font-weight:700;color:var(--gold);line-height:1;}
+.np-label{font-size:10px;color:var(--t2);letter-spacing:.1em;margin-top:4px;}
+.np-vs{font-size:11px;color:var(--up);margin-top:4px;}
+.ind-list{display:flex;flex-direction:column;gap:6px;margin-bottom:12px;}
+.ind-row{background:var(--s1);border:1px solid var(--bd1);border-radius:7px;padding:8px 10px;}
+.ind-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;}
+.ind-name{font-size:10px;color:var(--t1);}
+.ind-val{font-size:15px;font-weight:700;}
+.ind-bar-bg{height:3px;background:var(--bd1);border-radius:2px;overflow:hidden;}
+.ind-bar-fill{height:100%;border-radius:2px;transition:width .4s;}
+.ind-delta{font-size:9px;margin-top:3px;}
+.macro-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:12px;}
+.macro-card{background:var(--s1);border:1px solid var(--bd1);border-radius:7px;padding:8px;text-align:center;}
+.macro-val{font-size:18px;font-weight:700;}
+.macro-lbl{font-size:9px;color:var(--t2);margin-top:2px;letter-spacing:.04em;}
+.macro-sub{font-size:9px;margin-top:2px;}
+
+/* Japan Map */
+.map-wrap{background:var(--s1);border:1px solid var(--bd1);border-radius:8px;padding:10px;text-align:center;}
+.map-title{font-size:9px;color:var(--t2);letter-spacing:.1em;margin-bottom:8px;}
+.map-legend{display:flex;gap:8px;justify-content:center;margin-top:6px;flex-wrap:wrap;}
+.ml-item{font-size:9px;color:var(--t1);display:flex;align-items:center;gap:3px;}
+.ml-dot{width:7px;height:7px;border-radius:50%;}
+
+/* ═══ CENTER: AI CABINET ══════════════════════════════ */
+.directive-card{
+  background:var(--s1);border:1px solid var(--bd1);border-radius:10px;padding:14px;margin-bottom:12px;
+}
+.directive-label{font-size:10px;color:var(--gold);font-weight:600;letter-spacing:.06em;margin-bottom:8px;}
+.directive-input{
+  width:100%;background:var(--s2);border:1px solid var(--bd2);border-radius:7px;
+  padding:10px 12px;color:var(--t0);font-size:13px;resize:none;height:72px;outline:none;
+}
+.directive-input:focus{border-color:var(--sky);}
+.directive-hint{font-size:10px;color:var(--t2);margin-top:6px;}
+.btn-primary{
+  width:100%;padding:12px;background:var(--gold);color:#04060C;
+  font-size:13px;font-weight:700;border-radius:7px;margin-top:8px;
+  transition:background .15s;
+}
+.btn-primary:hover{background:var(--goldhi);}
+.btn-exec{
+  width:100%;padding:13px;background:linear-gradient(90deg,#1A4A28,#0D3A20);
+  color:#4AE890;font-size:13px;font-weight:700;border-radius:7px;
+  border:1px solid #2A6A38;transition:all .15s;
+}
+.btn-exec:hover{background:linear-gradient(90deg,#204E2C,#143E24);}
+
+/* AI Proposal Card */
+.proposal-card{
+  background:linear-gradient(135deg,#0A1E10,var(--s2));
+  border:1px solid #1A4A28;border-radius:10px;padding:14px;margin-bottom:12px;
+}
+.pc-name{font-size:14px;font-weight:700;color:#4AE890;margin-bottom:6px;}
+.pc-analysis{font-size:12px;color:var(--t1);line-height:1.7;margin-bottom:10px;}
+.pc-effects{display:flex;flex-wrap:wrap;gap:4px;}
+.eff-tag{font-size:10px;padding:2px 7px;border-radius:4px;font-weight:600;}
+.eff-pos{background:rgba(58,184,136,.15);color:#3AB888;border:1px solid rgba(58,184,136,.3);}
+.eff-neg{background:rgba(200,80,80,.15);color:#C85050;border:1px solid rgba(200,80,80,.3);}
+.eff-neu{background:var(--s2);color:var(--t1);border:1px solid var(--bd2);}
+
+/* Minister Grid */
+.cabinet-label{font-size:10px;color:var(--t2);letter-spacing:.1em;margin:12px 0 8px;display:flex;align-items:center;gap:8px;}
+.cabinet-label::after{content:'';flex:1;height:1px;background:var(--bd0);}
+.minister-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;}
+.mc{border-radius:9px;padding:11px 13px;border:1px solid;}
+.mc.fin{background:rgba(72,136,212,.08);border-color:rgba(72,136,212,.25);}
+.mc.eco{background:rgba(212,168,60,.08);border-color:rgba(212,168,60,.25);}
+.mc.wel{background:rgba(58,184,136,.08);border-color:rgba(58,184,136,.25);}
+.mc.opp{background:rgba(200,80,80,.08);border-color:rgba(200,80,80,.25);}
+.mc-hdr{display:flex;gap:6px;align-items:center;margin-bottom:6px;}
+.mc-ic{font-size:18px;}
+.mc-name{font-size:10px;font-weight:600;}
+.mc.fin .mc-name{color:var(--sky);}
+.mc.eco .mc-name{color:var(--gold);}
+.mc.wel .mc-name{color:var(--up);}
+.mc.opp .mc-name{color:var(--dn);}
+.mc-text{font-size:11px;color:var(--t1);line-height:1.6;}
+
+/* ═══ RIGHT: NEWS & CITIZENS ═════════════════════════ */
+.world-news{margin-bottom:12px;}
+.wn-item{
+  display:flex;gap:6px;font-size:11px;color:var(--t1);
+  padding:5px 0;border-bottom:1px solid var(--bd0);
+}
+.wn-item:last-child{border-bottom:none;}
+.ev-alert{
+  background:var(--amberbg);border:1px solid var(--amber);border-radius:8px;
+  padding:10px 12px;margin-bottom:12px;
+}
+.ev-alert-title{font-size:10px;font-weight:700;color:var(--amber);letter-spacing:.06em;margin-bottom:5px;}
+.ev-alert-text{font-size:12px;color:var(--t1);line-height:1.6;}
+.citizen-cards{display:flex;flex-direction:column;gap:7px;}
+.cc{background:var(--s1);border:1px solid var(--bd1);border-radius:8px;padding:10px 12px;}
+.cc-hdr{display:flex;gap:7px;align-items:center;margin-bottom:6px;}
+.cc-avatar{font-size:20px;}
+.cc-info{}
+.cc-name{font-size:11px;font-weight:600;color:var(--t0);}
+.cc-detail{font-size:9px;color:var(--t2);}
+.cc-voice{font-size:11px;color:var(--t1);line-height:1.65;}
+.approval-bar{margin-bottom:12px;}
+.ab-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;}
+.ab-label{font-size:10px;color:var(--t1);}
+.ab-val{font-size:14px;font-weight:700;color:var(--up);}
+.ab-bg{height:8px;background:var(--bd1);border-radius:4px;overflow:hidden;}
+.ab-fill{height:100%;border-radius:4px;transition:width .4s;}
+
+/* ═══ NEWS TAB ════════════════════════════════════════ */
+.newspaper{
+  background:var(--s1);border:1px solid var(--bd2);border-radius:10px;
+  padding:20px;margin-bottom:14px;max-width:700px;
+}
+.np-masthead{
+  text-align:center;padding-bottom:12px;border-bottom:2px solid var(--t1);margin-bottom:14px;
+}
+.np-masthead-title{font-size:22px;font-weight:700;color:var(--t0);letter-spacing:.05em;}
+.np-masthead-sub{font-size:10px;color:var(--t2);margin-top:3px;letter-spacing:.1em;}
+.np-headline{font-size:18px;font-weight:700;color:var(--t0);margin-bottom:8px;line-height:1.4;}
+.np-body{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+.np-col{font-size:12px;color:var(--t1);line-height:1.75;}
+.np-byline{font-size:10px;color:var(--t2);margin-bottom:8px;}
+
+/* ═══ DATA TAB ════════════════════════════════════════ */
+.chart-placeholder{
+  background:var(--s1);border:1px solid var(--bd1);border-radius:10px;
+  padding:20px;text-align:center;margin-bottom:12px;
+}
+.chart-label{font-size:12px;color:var(--t1);margin-bottom:12px;}
+.chart-bar-group{display:flex;align-items:flex-end;gap:6px;height:120px;justify-content:center;}
+.chart-bar{width:28px;background:linear-gradient(to top,var(--sky),var(--lav));border-radius:3px 3px 0 0;position:relative;}
+.chart-bar-year{position:absolute;bottom:-18px;left:50%;transform:translateX(-50%);font-size:8px;color:var(--t2);white-space:nowrap;}
+.history-table{width:100%;border-collapse:collapse;font-size:12px;}
+.history-table th{background:var(--s2);color:var(--t2);font-size:10px;padding:8px 10px;text-align:left;border-bottom:1px solid var(--bd2);letter-spacing:.04em;}
+.history-table td{padding:8px 10px;border-bottom:1px solid var(--bd0);color:var(--t1);}
+.history-table tr:last-child td{border-bottom:none;}
+
+/* ═══ TAB PANELS ══════════════════════════════════════ */
+.tab-panel{display:none;}
+.tab-panel.active{display:block;}
+
+/* ═══ ANNOTATION LAYER ════════════════════════════════ */
+.annotation{
+  position:fixed;right:10px;bottom:60px;
+  background:#1A0C30;border:1px solid var(--lav);border-radius:10px;
+  padding:14px;max-width:220px;z-index:100;
+}
+.ann-title{font-size:10px;color:var(--lav);font-weight:700;margin-bottom:8px;letter-spacing:.08em;}
+.ann-item{font-size:11px;color:var(--t1);padding:4px 0;border-bottom:1px solid var(--bd0);display:flex;gap:6px;align-items:flex-start;}
+.ann-item:last-child{border-bottom:none;}
+.ann-check{color:var(--up);flex-shrink:0;}
+.ann-close{position:absolute;top:8px;right:10px;background:transparent;border:none;color:var(--t2);font-size:16px;cursor:pointer;padding:0;}
+</style>
+</head>
+<body>
+
+<!-- Proposal Banner -->
+<div class="proposal-banner">
+  <span class="pb-badge">UI改善提案</span>
+  <span class="pb-text">これは<strong>提案モックアップ</strong>です。実際のゲームデータを入れてStreamlitで動作します。タブは切り替え可能です。</span>
+</div>
+
+<!-- GAME HEADER -->
+<div id="hdr">
+  <div class="hdr-era-bar">
+    <span class="era-dot"></span>
+    <span>高度成長期 — 所得倍増計画の時代 / 東京オリンピックまであと4年</span>
+    <span style="margin-left:auto;color:var(--t2)">ターン 16 / 81</span>
+  </div>
+  <div class="hdr-main">
+    <div class="hdr-left">
+      <span class="flag-icon">🇯🇵</span>
+      <div>
+        <div class="year-display">1960年</div>
+        <div class="year-sub">昭和35年</div>
+      </div>
+    </div>
+    <div class="hdr-center">
+      <div class="hdr-metric">
+        <div class="hm-val" style="color:var(--up)">112</div>
+        <div class="hm-lbl">総合国力 HI</div>
+        <div class="hm-trend" style="color:var(--up)">▲12%</div>
+      </div>
+      <div class="hdr-metric">
+        <div class="hm-val" style="color:var(--gold)">3.2%</div>
+        <div class="hm-lbl">インフレ率</div>
+        <div class="hm-trend" style="color:var(--up)">▼0.4%</div>
+      </div>
+      <div class="hdr-metric">
+        <div class="hm-val" style="color:var(--amber)">62.5%</div>
+        <div class="hm-lbl">債務/GDP比</div>
+        <div class="hm-trend" style="color:var(--dn)">▲2.1%</div>
+      </div>
+    </div>
+    <div class="hdr-right">
+      <div class="support-ring-wrap">
+        <svg viewBox="0 0 70 70">
+          <circle cx="35" cy="35" r="28" fill="none" stroke="#1C2A4A" stroke-width="7"/>
+          <circle cx="35" cy="35" r="28" fill="none" stroke="#3AB888" stroke-width="7"
+            stroke-dasharray="125.6 175.9" stroke-dashoffset="0" stroke-linecap="round"
+            transform="rotate(-90 35 35)"/>
+        </svg>
+        <div class="support-num">72%</div>
+      </div>
+      <div class="support-lbl">政府支持率</div>
+    </div>
+  </div>
+</div>
+
+<!-- TAB BAR -->
+<div class="tab-bar">
+  <button class="tab-btn active" onclick="switchTab('policy')">🏛️ 政策・AI閣議</button>
+  <button class="tab-btn" onclick="switchTab('news')">📰 ニュース・国民</button>
+  <button class="tab-btn" onclick="switchTab('data')">📊 国家データ</button>
+</div>
+
+<!-- ──────────────── TAB: 政策 ──────────────── -->
+<div id="tab-policy" class="tab-panel active">
+<div id="main">
+
+  <!-- LEFT: NATIONAL DASHBOARD -->
+  <div class="panel panel-left">
+
+    <div class="section-title">🏛️ NATIONAL DASHBOARD</div>
+
+    <!-- NP Hero -->
+    <div class="np-hero">
+      <div class="np-val">112</div>
+      <div class="np-label">総合国力 Historical Index</div>
+      <div class="np-vs">▲12% vs 史実</div>
+    </div>
+
+    <!-- Indicators -->
+    <div class="section-title" style="margin-top:2px">指標</div>
+    <div class="ind-list">
+      <div class="ind-row">
+        <div class="ind-top">
+          <span class="ind-name">💴 GDP</span>
+          <span class="ind-val" style="color:#7EC4B0">115</span>
+        </div>
+        <div class="ind-bar-bg">
+          <div class="ind-bar-fill" style="width:72%;background:#7EC4B0;"></div>
+        </div>
+        <div class="ind-delta" style="color:var(--up)">▲15% — 史実値 38pts</div>
+      </div>
+      <div class="ind-row">
+        <div class="ind-top">
+          <span class="ind-name">🏥 国民福祉</span>
+          <span class="ind-val" style="color:var(--up)">108</span>
+        </div>
+        <div class="ind-bar-bg">
+          <div class="ind-bar-fill" style="width:67%;background:var(--up);"></div>
+        </div>
+        <div class="ind-delta" style="color:var(--up)">▲8% — 史実値 38pts</div>
+      </div>
+      <div class="ind-row">
+        <div class="ind-top">
+          <span class="ind-name">⚔️ 軍事力</span>
+          <span class="ind-val" style="color:var(--t0)">100</span>
+        </div>
+        <div class="ind-bar-bg">
+          <div class="ind-bar-fill" style="width:62%;background:var(--t1);"></div>
+        </div>
+        <div class="ind-delta" style="color:var(--t2)">─ 0% — 軍事上限: 20</div>
+      </div>
+      <div class="ind-row">
+        <div class="ind-top">
+          <span class="ind-name">🤝 外交力</span>
+          <span class="ind-val" style="color:var(--up)">112</span>
+        </div>
+        <div class="ind-bar-bg">
+          <div class="ind-bar-fill" style="width:70%;background:var(--sky);"></div>
+        </div>
+        <div class="ind-delta" style="color:var(--up)">▲12% — 史実値 38pts</div>
+      </div>
+      <div class="ind-row">
+        <div class="ind-top">
+          <span class="ind-name">⚙️ 技術力</span>
+          <span class="ind-val" style="color:var(--up)">118</span>
+        </div>
+        <div class="ind-bar-bg">
+          <div class="ind-bar-fill" style="width:74%;background:var(--lav);"></div>
+        </div>
+        <div class="ind-delta" style="color:var(--up)">▲18% — 史実値 48pts</div>
+      </div>
+    </div>
+
+    <!-- Macro -->
+    <div class="section-title">マクロ経済</div>
+    <div class="macro-grid">
+      <div class="macro-card">
+        <div class="macro-val" style="color:var(--up)">3.2%</div>
+        <div class="macro-lbl">インフレ率</div>
+        <div class="macro-sub" style="color:var(--up)">適正水準 ✓</div>
+      </div>
+      <div class="macro-card">
+        <div class="macro-val" style="color:var(--amber)">62.5%</div>
+        <div class="macro-lbl">債務/GDP比</div>
+        <div class="macro-sub" style="color:var(--amber)">▲ 注意</div>
+      </div>
+    </div>
+
+    <!-- Japan Map -->
+    <div class="map-wrap">
+      <div class="map-title">地域別満足度</div>
+      <svg viewBox="0 0 180 320" width="140" xmlns="http://www.w3.org/2000/svg">
+        <!-- Hokkaido -->
+        <ellipse cx="140" cy="30" rx="32" ry="22" fill="#3AB888" opacity=".7"/>
+        <text x="140" y="35" text-anchor="middle" font-size="8" fill="#C8D8EC">北海道</text>
+        <!-- Tohoku -->
+        <path d="M 110 55 Q 120 50 130 60 L 125 90 Q 115 100 105 95 Q 100 80 110 55 Z" fill="#7EC4B0" opacity=".7"/>
+        <text x="116" y="78" text-anchor="middle" font-size="7" fill="#C8D8EC">東北</text>
+        <!-- Kanto -->
+        <path d="M 95 100 Q 115 95 125 105 L 120 130 Q 110 140 95 135 Q 85 125 95 100 Z" fill="#3AB888" opacity=".8"/>
+        <text x="107" y="118" text-anchor="middle" font-size="7" fill="#C8D8EC">関東★</text>
+        <!-- Chubu -->
+        <path d="M 78 135 Q 100 130 110 145 L 100 168 Q 88 175 76 165 Q 70 152 78 135 Z" fill="#4AE890" opacity=".6"/>
+        <text x="93" y="155" text-anchor="middle" font-size="7" fill="#C8D8EC">中部</text>
+        <!-- Kinki -->
+        <path d="M 62 168 Q 80 162 88 175 L 82 198 Q 72 205 60 198 Q 54 185 62 168 Z" fill="#3AB888" opacity=".7"/>
+        <text x="73" y="186" text-anchor="middle" font-size="7" fill="#C8D8EC">近畿</text>
+        <!-- Chugoku/Shikoku -->
+        <path d="M 45 200 Q 70 196 78 210 L 70 230 Q 58 235 46 228 Q 40 216 45 200 Z" fill="#D4A83C" opacity=".6"/>
+        <text x="60" y="218" text-anchor="middle" font-size="7" fill="#C8D8EC">中四国</text>
+        <!-- Kyushu -->
+        <path d="M 30 235 Q 55 230 60 248 L 50 278 Q 38 285 26 275 Q 20 258 30 235 Z" fill="#3AB888" opacity=".7"/>
+        <text x="42" y="260" text-anchor="middle" font-size="7" fill="#C8D8EC">九州</text>
+        <!-- Okinawa -->
+        <ellipse cx="35" cy="302" rx="12" ry="8" fill="#7EC4B0" opacity=".6"/>
+        <text x="35" y="306" text-anchor="middle" font-size="6" fill="#C8D8EC">沖縄</text>
+      </svg>
+      <div class="map-legend">
+        <span class="ml-item"><span class="ml-dot" style="background:var(--up)"></span>高</span>
+        <span class="ml-item"><span class="ml-dot" style="background:var(--gold)"></span>普通</span>
+        <span class="ml-item"><span class="ml-dot" style="background:var(--dn)"></span>低</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- CENTER: AI CABINET -->
+  <div class="panel panel-center">
+    <div class="section-title">🏛️ AI閣議室 — 首相への提言</div>
+
+    <!-- Directive Input -->
+    <div class="directive-card">
+      <div class="directive-label">🎙️ 首相指示</div>
+      <textarea class="directive-input" placeholder="例：所得倍増計画を推進しつつ、公害対策にも一定の予算を確保したい。農村の近代化も急ぎたい。">所得倍増計画を強力に推進しつつ、急増するインフレを抑制したい。また農村と都市の格差拡大を防ぐため、社会保障の底上げも図りたい。</textarea>
+      <div class="directive-hint">💡 自然言語で方針を入力するとAIが政策パッケージと閣僚の見解を生成します</div>
+    </div>
+
+    <!-- AI Proposal -->
+    <div class="proposal-card">
+      <div class="pc-name">「均衡成長パッケージ（1960年版）」</div>
+      <div class="pc-analysis">
+        現在の経済指数(HI 115)はすでに史実を上回っており、過熱を抑えつつ持続的成長を図るのが最善です。所得倍増の政策目標は維持しつつ、財政均衡による物価安定と農村への再配分を両立する政策パッケージを提案します。
+      </div>
+      <div class="pc-effects">
+        <span class="eff-tag eff-pos">econCap +2</span>
+        <span class="eff-tag eff-pos">humanCap +1</span>
+        <span class="eff-tag eff-pos">socialDev +2</span>
+        <span class="eff-tag eff-neg">inflation −0.5%</span>
+        <span class="eff-tag eff-neg">debt +1.5%</span>
+      </div>
+    </div>
+
+    <!-- Cabinet Responses -->
+    <div class="cabinet-label">閣僚の見解</div>
+    <div class="minister-grid">
+      <div class="mc fin">
+        <div class="mc-hdr">
+          <span class="mc-ic">💰</span>
+          <span class="mc-name">財務大臣</span>
+        </div>
+        <div class="mc-text">インフレ抑制は急務ですが、公共投資の大幅削減は成長を損ないます。国債増発に頼らず税収増で賄える範囲での実施を強く求めます。</div>
+      </div>
+      <div class="mc eco">
+        <div class="mc-hdr">
+          <span class="mc-ic">🏭</span>
+          <span class="mc-name">経産大臣</span>
+        </div>
+        <div class="mc-text">産業合理化と輸出振興が進んでいる今こそ、技術開発投資を止めてはなりません。重化学工業への重点配分が引き続き必要です。</div>
+      </div>
+      <div class="mc wel">
+        <div class="mc-hdr">
+          <span class="mc-ic">🏥</span>
+          <span class="mc-name">厚労大臣</span>
+        </div>
+        <div class="mc-text">農村と都市の所得格差が広がっています。国民健康保険の全国普及と農業従事者の社会保障強化を優先すべきです。</div>
+      </div>
+      <div class="mc opp">
+        <div class="mc-hdr">
+          <span class="mc-ic">🔴</span>
+          <span class="mc-name">野党党首</span>
+        </div>
+        <div class="mc-text">「均衡成長」の名のもとに農民・労働者への分配が後回しにされている。財界優遇の成長路線を根本から見直すべきだ。</div>
+      </div>
+    </div>
+
+    <button class="btn-exec">✅ この政策を実行して翌年（1961年）へ進む</button>
+  </div>
+
+  <!-- RIGHT: NEWS & CITIZENS -->
+  <div class="panel panel-right">
+
+    <!-- Historical Event Alert -->
+    <div class="ev-alert">
+      <div class="ev-alert-title">🔔 歴史イベント発生</div>
+      <div class="ev-alert-text">【安保改定・岸内閣退陣】改定日米安保条約の強行採決により安保闘争が激化。岸内閣が退陣し、池田勇人内閣が発足しました。</div>
+    </div>
+
+    <!-- World News -->
+    <div class="world-news">
+      <div class="section-title">🌍 WORLD NEWS 1960</div>
+      <div class="wn-item">🌍 アフリカの年 — 17か国が独立</div>
+      <div class="wn-item">🇺🇸 ケネディ大統領当選</div>
+      <div class="wn-item">🚀 宇宙開発競争が激化</div>
+    </div>
+
+    <!-- Approval -->
+    <div class="approval-bar">
+      <div class="section-title">支持率トレンド</div>
+      <div class="ab-row">
+        <span class="ab-label">政府支持率</span>
+        <span class="ab-val">72%</span>
+      </div>
+      <div class="ab-bg">
+        <div class="ab-fill" style="width:72%;background:linear-gradient(90deg,var(--up),#7EC4B0);"></div>
+      </div>
+      <div style="font-size:9px;color:var(--t2);margin-top:3px;">前年比 ▲5%（安保闘争後に回復中）</div>
+    </div>
+
+    <!-- Citizens -->
+    <div class="section-title">🗣️ 国民の声</div>
+    <div class="citizen-cards">
+      <div class="cc">
+        <div class="cc-hdr">
+          <span class="cc-avatar">👷</span>
+          <div class="cc-info">
+            <div class="cc-name">中部の製造業労働者（32歳）</div>
+            <div class="cc-detail">自動車工場・愛知県</div>
+          </div>
+        </div>
+        <div class="cc-voice">トヨタに就職できて給料が上がり続けている。このままいけば来年はマイホームも夢じゃない。政府の成長路線は正しいと思う。</div>
+      </div>
+      <div class="cc">
+        <div class="cc-hdr">
+          <span class="cc-avatar">🌾</span>
+          <div class="cc-info">
+            <div class="cc-name">東北の農家（51歳）</div>
+            <div class="cc-detail">稲作農家・秋田県</div>
+          </div>
+        </div>
+        <div class="cc-voice">息子たちは次々と都会に出て行く。農業だけでは食えないからだ。政府は工業ばかりで農村のことを忘れているのではないか。</div>
+      </div>
+      <div class="cc">
+        <div class="cc-hdr">
+          <span class="cc-avatar">🎓</span>
+          <div class="cc-info">
+            <div class="cc-name">東京の大学生（22歳）</div>
+            <div class="cc-detail">工学部・東京大学</div>
+          </div>
+        </div>
+        <div class="cc-voice">安保反対で岸首相が退陣した。でも池田内閣になって「所得倍増」と言われれば、未来が明るい気がして複雑な気持ちだ。</div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /main -->
+</div><!-- /tab-policy -->
+
+<!-- ──────────────── TAB: ニュース ──────────────── -->
+<div id="tab-news" class="tab-panel">
+<div style="max-width:900px;margin:0 auto;padding:20px;">
+
+  <div style="display:grid;grid-template-columns:1fr 320px;gap:16px;">
+    <!-- Newspaper -->
+    <div class="newspaper">
+      <div class="np-masthead">
+        <div class="np-masthead-title">AI日本経済新聞</div>
+        <div class="np-masthead-sub">1960年（昭和35年）第16号 ／ ゲーム内仮想紙面</div>
+      </div>
+      <div class="np-headline">池田内閣「均衡成長パッケージ」閣議決定<br>インフレ抑制と社会保障拡充を両立</div>
+      <div class="np-byline">【東京 本社】AI経済部</div>
+      <div class="np-body">
+        <div class="np-col">
+          池田内閣は本日、「均衡成長パッケージ」を閣議決定した。急速な経済成長に伴うインフレ率の上昇（現在3.2%）への対応策として、財政均衡を維持しながらも農村部への社会保障投資を拡充する内容となっている。<br><br>
+          財務省は「持続可能な成長のためには過熱を抑える施策が不可欠」と強調。一方、経産省は「技術開発投資の継続が産業競争力の源泉」として引き続き重化学工業への予算配分を要求した。
+        </div>
+        <div class="np-col">
+          農林水産省は農村部の国民健康保険加入率向上を優先事項として掲げた。急増する都市と農村の格差への対応が政策の焦点となっている。<br><br>
+          日本の総合国力指数は史実比112（▲12%超過）を記録しており、高度成長が史実を上回るペースで進行中だ。株式市場も政策決定を好感し、日経平均は連日の最高値更新が続いている。
+        </div>
+      </div>
+    </div>
+
+    <!-- Citizens (wider) -->
+    <div>
+      <div class="section-title" style="padding:14px 0 6px">🗣️ 国民の声（全員）</div>
+      <div class="citizen-cards">
+        <div class="cc">
+          <div class="cc-hdr"><span class="cc-avatar">👷</span><div><div class="cc-name">製造業労働者</div><div class="cc-detail">32歳・愛知県</div></div></div>
+          <div class="cc-voice">給料が上がり続けている。マイホームが見えてきた。</div>
+        </div>
+        <div class="cc">
+          <div class="cc-hdr"><span class="cc-avatar">🌾</span><div><div class="cc-name">農家</div><div class="cc-detail">51歳・秋田県</div></div></div>
+          <div class="cc-voice">息子たちが都会に出て行く。農村を忘れないでほしい。</div>
+        </div>
+        <div class="cc">
+          <div class="cc-hdr"><span class="cc-avatar">🏪</span><div><div class="cc-name">商店主</div><div class="cc-detail">44歳・大阪</div></div></div>
+          <div class="cc-voice">景気はいいが物価も上がっている。商売は難しい。</div>
+        </div>
+        <div class="cc">
+          <div class="cc-hdr"><span class="cc-avatar">🎓</span><div><div class="cc-name">大学生</div><div class="cc-detail">22歳・東京</div></div></div>
+          <div class="cc-voice">安保反対の気持ちと所得倍増への期待が入り混じる。</div>
+        </div>
+        <div class="cc">
+          <div class="cc-hdr"><span class="cc-avatar">👴</span><div><div class="cc-name">高齢者</div><div class="cc-detail">68歳・九州</div></div></div>
+          <div class="cc-voice">変化が速すぎる。年金制度がしっかりしてほしいだけだ。</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- ──────────────── TAB: データ ──────────────── -->
+<div id="tab-data" class="tab-panel">
+<div style="max-width:900px;margin:0 auto;padding:20px;">
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;">
+    <div class="chart-placeholder">
+      <div class="chart-label">📈 国家成長軌跡（GDP・総合国力）</div>
+      <div class="chart-bar-group">
+        <div class="chart-bar" style="height:20%"><span class="chart-bar-year">1945</span></div>
+        <div class="chart-bar" style="height:28%"><span class="chart-bar-year">1948</span></div>
+        <div class="chart-bar" style="height:35%"><span class="chart-bar-year">1950</span></div>
+        <div class="chart-bar" style="height:44%"><span class="chart-bar-year">1952</span></div>
+        <div class="chart-bar" style="height:55%"><span class="chart-bar-year">1954</span></div>
+        <div class="chart-bar" style="height:66%"><span class="chart-bar-year">1956</span></div>
+        <div class="chart-bar" style="height:78%"><span class="chart-bar-year">1958</span></div>
+        <div class="chart-bar" style="height:92%"><span class="chart-bar-year">1960</span></div>
+      </div>
+      <div style="font-size:10px;color:var(--t2);margin-top:20px">※ Plotlyグラフが実際にここに表示されます</div>
+    </div>
+    <div class="chart-placeholder">
+      <div class="chart-label">📉 マクロ経済推移（インフレ・債務）</div>
+      <div class="chart-bar-group">
+        <div class="chart-bar" style="height:80%;background:linear-gradient(to top,var(--dn),var(--amber))"><span class="chart-bar-year">1945</span></div>
+        <div class="chart-bar" style="height:60%;background:linear-gradient(to top,var(--dn),var(--amber))"><span class="chart-bar-year">1948</span></div>
+        <div class="chart-bar" style="height:45%;background:linear-gradient(to top,var(--dn),var(--amber))"><span class="chart-bar-year">1951</span></div>
+        <div class="chart-bar" style="height:38%;background:linear-gradient(to top,var(--dn),var(--amber))"><span class="chart-bar-year">1953</span></div>
+        <div class="chart-bar" style="height:30%;background:linear-gradient(to top,var(--amber),var(--gold))"><span class="chart-bar-year">1955</span></div>
+        <div class="chart-bar" style="height:28%;background:linear-gradient(to top,var(--amber),var(--gold))"><span class="chart-bar-year">1957</span></div>
+        <div class="chart-bar" style="height:24%;background:linear-gradient(to top,var(--up),var(--gold))"><span class="chart-bar-year">1959</span></div>
+        <div class="chart-bar" style="height:22%;background:linear-gradient(to top,var(--up),var(--sky))"><span class="chart-bar-year">1960</span></div>
+      </div>
+      <div style="font-size:10px;color:var(--t2);margin-top:20px">※ Plotlyグラフが実際にここに表示されます</div>
+    </div>
+  </div>
+
+  <div class="chart-placeholder" style="text-align:left">
+    <div class="chart-label" style="margin-bottom:10px">📋 政策実行履歴</div>
+    <table class="history-table">
+      <thead><tr><th>年</th><th>政策パッケージ</th><th>総合国力HI</th><th>インフレ率</th><th>政府債務比</th></tr></thead>
+      <tbody>
+        <tr><td>1952</td><td>復興推進プログラム</td><td>88</td><td>8.2%</td><td>45.0%</td></tr>
+        <tr><td>1955</td><td>傾斜生産・技術導入策</td><td>96</td><td>5.6%</td><td>52.0%</td></tr>
+        <tr><td>1957</td><td>重化学工業推進パッケージ</td><td>104</td><td>4.1%</td><td>57.5%</td></tr>
+        <tr><td>1959</td><td>社会保障整備・貿易自由化</td><td>108</td><td>3.6%</td><td>60.0%</td></tr>
+        <tr style="background:var(--s2)"><td><strong>1960</strong></td><td><strong>均衡成長パッケージ（実行中）</strong></td><td><strong>112</strong></td><td><strong>3.2%</strong></td><td><strong>62.5%</strong></td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+</div>
+
+<!-- Annotation Panel -->
+<div class="annotation" id="ann">
+  <button class="ann-close" onclick="document.getElementById('ann').style.display='none'">✕</button>
+  <div class="ann-title">✨ 改善ポイント</div>
+  <div class="ann-item"><span class="ann-check">✓</span><span>年号・支持率・マクロ指標をヘッダーで一目で確認</span></div>
+  <div class="ann-item"><span class="ann-check">✓</span><span>時代情景バーで高度成長の雰囲気を演出</span></div>
+  <div class="ann-item"><span class="ann-check">✓</span><span>日本地図で地域別満足度を可視化</span></div>
+  <div class="ann-item"><span class="ann-check">✓</span><span>大臣カードが役職別に色分け・視認性向上</span></div>
+  <div class="ann-item"><span class="ann-check">✓</span><span>AI提案が政策効果タグ付きで明確に表示</span></div>
+  <div class="ann-item"><span class="ann-check">✓</span><span>ニュースが実際の新聞紙面スタイルに</span></div>
+  <div class="ann-item"><span class="ann-check">✓</span><span>市民ごとの属性（職業・年齢・地域）が明確</span></div>
+</div>
+
+<script>
+function switchTab(t){
+  document.querySelectorAll('.tab-btn').forEach(function(b){b.classList.remove('active');});
+  document.querySelectorAll('.tab-panel').forEach(function(p){p.classList.remove('active');});
+  event.target.classList.add('active');
+  document.getElementById('tab-'+t).classList.add('active');
+}
+</script>
+</body>
+</html>
